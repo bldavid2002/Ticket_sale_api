@@ -1,6 +1,7 @@
 import asyncio
-import httpx
 import time
+
+import httpx
 
 URL = "http://localhost:8000/reserve"
 
@@ -30,7 +31,7 @@ async def main():
     conflicts = result.count(409)
 
     print("\nLOAD TEST RESULTS")
-    print(f"Total Requests: 500")
+    print("Total Requests: 500")
     print(f"Time Taken:   {duration:.2f} seconds")
     print(f"Successes:   {successes} (Should be EXACTLY 1)")
     print(f"Blocked:     {conflicts} (Should be 499)")

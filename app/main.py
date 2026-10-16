@@ -1,9 +1,10 @@
 import json
 from contextlib import asynccontextmanager
+
+import aio_pika
+import redis.asyncio as redis
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
-import redis.asyncio as redis
-import aio_pika
 
 
 class ReservationRequest(BaseModel):
