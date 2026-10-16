@@ -51,6 +51,9 @@ jobs:
             tags: ticket_api:test
             load: true
       
+        - name: Build Docker image for scanning
+          run: docker build -t ticket_api:latest ./app
+
         - name: Run Trivy vulnerability scanner
           uses: aquasecurity/trivy-action@v0.36.0
           with:
