@@ -1,8 +1,8 @@
 FROM python:3.12-slim as builder
 
-WORKDIR /app
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y gcc
+WORKDIR /app
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
