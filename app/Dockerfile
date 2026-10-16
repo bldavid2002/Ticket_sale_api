@@ -10,7 +10,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 FROM python:3.12-slim as runner
 
-# Update system packages in the runner stage to clear OS CVEs
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m apiuser
