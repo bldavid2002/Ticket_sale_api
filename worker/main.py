@@ -6,25 +6,6 @@ import asyncpg
 DB_URL = "postgresql://postgres:password@postgres:5432/ticketing"
 AMQP_URL = "amqp://guest:guest@rabbitmq:5672/"
 
-async def setup_database():
-    """Connects to Postgres and creates the table if it doesn't exist."""
-    conn = await asyncpg.connect(DB_URL)
-    await conn.execute('''
-        CREATE TABLE IF NOT EXISTS reservations (
-            id SERIAL PRIMARY KEY,
-            user_id VARCHAR(50),
-            item_id VARCHAR(50),
-            quantity INT,
-            section VARCHAR(10),
-            row VARCHAR(10),
-            seat_number INT,
-            timestamp BIGINT,
-            price_cents INT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    await conn.close()
-    print("Database setup complete.")
 
 async def process_message(message: aio_pika.IncomingMessage):
     async with message.process():
@@ -40,7 +21,6 @@ async def process_message(message: aio_pika.IncomingMessage):
         print("Succesfully saved reservation to database.")
 
 async def main():
-    await setup_database()
     connection = await aio_pika.connect_robust(AMQP_URL)
     channel = await connection.channel()
     queue = await channel.declare_queue("reservation_queue", durable=True)
@@ -49,7 +29,7 @@ async def main():
     await queue.consume(process_message)
 
     try:
-        await asyncio.Future()  # Run forever
+        await asyncio.Future()  
     finally:
         await connection.close()
 

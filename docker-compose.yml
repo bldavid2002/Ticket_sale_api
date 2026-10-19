@@ -80,6 +80,28 @@ services:
       - api
     restart: unless-stopped
 
+  db-migrations:
+    image: postgres:15-alpine
+    depends_on:
+      - postgres
+    command: >
+      sh -c "until pg_isready -h postgres -U postgres -d ticketing; do sleep 1; done;
+      psql -h postgres -U postgres -d ticketing -c '
+      CREATE TABLE IF NOT EXISTS reservations (
+          id SERIAL,
+          user_id VARCHAR(50) NOT NULL,
+          item_id VARCHAR(50) NOT NULL,
+          quantity INT,
+          section VARCHAR(10),
+          row VARCHAR(10),
+          seat_number INT,
+          timestamp BIGINT,
+          price_cents INT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (id, item_id)
+      ) PARTITION BY LIST (item_id);
+      CREATE TABLE IF NOT EXISTS reservations_default PARTITION OF reservations DEFAULT;'"
+
 volumes:
   postgres_data:
 
