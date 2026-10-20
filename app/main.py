@@ -5,6 +5,8 @@ import aio_pika
 import redis.asyncio as redis
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
+import logging
+import asyncio
 
 
 class ReservationRequest(BaseModel):
@@ -32,6 +34,22 @@ async def lifespan(app: FastAPI):
     yield
     await redis_client.close()
     await rabbitmq_connection.close()
+
+    logger = logging.getLogger(__name__)
+    max_retries = 5
+    retry_delay = 3
+
+    for attempt in range(1, max_retries + 1):
+        try: 
+            logger.info("Connecting to RabbitMQ (Attempt {attempt}/{max_retries})")
+            rabbitmq_connection = await aio_pika.connect_robust("amqp://guest:guest@rabbitmq:5672/")
+            break
+        except Exception as e:
+            if attempt == max_retries:
+                raise e
+            logger.warning("RabbitMQ not ready yet, retrying in {retry_delay}s")
+            await asyncio.sleep(retry_delay)
+            
 
 app = FastAPI(title="Reservation API", lifespan=lifespan)
 
