@@ -3,3 +3,4 @@ __pychache__/
 -pytest_cache/
 .env/
 venv/
+k8s/postgres-secret.yml
