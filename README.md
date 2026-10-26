@@ -23,3 +23,17 @@ docker compose up --build -d
 * Redis for caching
 * RabbitMQ for message queuing
 * GitHub Actions for automated CI and security scanning
+
+## Kubernetes Deployment
+To deploy the custom primary-replica database architecture to a local cluster:
+
+- kubectl apply -f k8s/postgres-secret.yml
+- kubectl apply -f k8s/postgres-primary.yml
+- kubectl apply -f k8s/postgres-replica.yml
+
+## Engineering Decisions and Solutions
+- Automated Replication Cloning: The replica uses an initContainer that waits for the primary to become healthy and automatically clones data using pg_basebackup.
+
+- Permission Management: Managed container permission mismatches between root-owned backup files and the non-root PostgreSQL process by integrating explicit chown and strict 0700 directory permissions into the initialization script.
+
+- Network Authentication: Configured explicit replication roles and updated pg_hba.conf rules on the primary node to authorize cluster-internal streaming connections.

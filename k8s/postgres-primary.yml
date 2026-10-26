@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-primary-service
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres-primary
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-primary
+spec:
+  serviceName: "postgres-primary-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-primary
+  template:
+    metadata:
+      labels:
+        app: postgres-primary
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+
+          args:
+            - "postgres"
+            - "-c"
+            - "wal_level=replica"
+            - "-c"
+            - "max_wal_senders=10"
+            - "-c"
+            - "max_replication_slots=10"
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "200m"
+              memory: "256Mi"

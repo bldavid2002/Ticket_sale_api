@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-replica-service
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres-replica
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-replica
+spec:
+  serviceName: "postgres-replica-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-replica
+  template:
+    metadata:
+      labels:
+        app: postgres-replica
+    spec:
+      initContainers:
+        - name: init-clone
+          image: postgres:15-alpine
+          env:
+            - name: PGPASSWORD
+              value: "replicationpassword"
+          command:
+            - "sh"
+            - "-c"
+            - |
+              until pg_isready -h postgres-primary-service -U postgres; do 
+                echo "Waiting for primary..."
+                sleep 2
+              done
+              if [ ! -s /var/lib/postgresql/data/postgresql.conf ]; then
+                echo "Data directory is empty. Cloning primary..."
+                rm -rf /var/lib/postgresql/data/*
+                pg_basebackup -h postgres-primary-service -U replicator -D /var/lib/postgresql/data -P -Xs -R
+              fi
+              # Ensure user 999 owns the files and permissions are strictly locked down to 700
+              chown -R 999:999 /var/lib/postgresql/data
+              chmod 0700 /var/lib/postgresql/data
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGUSER
+              value: "replicator"
+            - name: PGPASSWORD
+              value: "replicationpassword"
+          command:
+            - "postgres"
+            - "-c"
+            - "hot_standby=on"
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
